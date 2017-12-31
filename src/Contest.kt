@@ -17,25 +17,18 @@ fun main(args: Array<String>) {
         }
     }
 
-    val word = "java"
+    val word = Pattern.compile("java", Pattern.CASE_INSENSITIVE)
 
     val total = urls.stream().map { url ->
         var count = 0
         reader(url) {
-            var line = readLine()?.toLowerCase()
+            var line = readLine()
             while (line != null) {
-                var lastIndex = 0
-
-                while (lastIndex != -1) {
-                    lastIndex = line.indexOf(word, lastIndex)
-
-                    if (lastIndex != -1) {
-                        count++
-                        lastIndex += word.length
-                    }
+                val matcher = word.matcher(line)
+                while (matcher.find()) {
+                    count++
                 }
-
-                line = readLine()?.toLowerCase()
+                line = readLine()
             }
         }
         count
