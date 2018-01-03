@@ -10,7 +10,7 @@ fun main(args: Array<String>) {
 
     val download = Pattern.compile("\"download_url\":\"(.*?)\"")
 
-    forEachMatchedLine("https://api.github.com/repos/JavaBy/jprof-hugo/contents/content/post", download) { matcher ->
+    forEachMatched("https://api.github.com/repos/JavaBy/jprof-hugo/contents/content/post", download) { matcher ->
         urls.add(matcher.group(1))
     }
 
@@ -18,14 +18,14 @@ fun main(args: Array<String>) {
 
     val total = urls.stream().map { url ->
         var count = 0
-        forEachMatchedLine(url, word) { count++ }
+        forEachMatched(url, word) { count++ }
         count
     }.parallel().reduce(0, Integer::sum)
 
     println(total)
 }
 
-fun forEachMatchedLine(url: String, pattern: Pattern, block: (Matcher) -> Unit) = URL(url).openConnection().inputStream.reader().forEachLine {
+fun forEachMatched(url: String, pattern: Pattern, block: (Matcher) -> Unit) = URL(url).openConnection().inputStream.reader().forEachLine {
     val matcher = pattern.matcher(it)
     while (matcher.find()) block(matcher)
 }
