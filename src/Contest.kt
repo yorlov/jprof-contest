@@ -1,31 +1,31 @@
 import java.net.URL
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import java.util.stream.Collectors.toSet
+import java.util.stream.Stream
+import java.util.stream.StreamSupport
 
 
 fun main(args: Array<String>) {
-    val urls = hashSetOf(
-            "https://raw.githubusercontent.com/JavaBy/jprof-hugo/master/content/about.md",
-            "https://raw.githubusercontent.com/JavaBy/jprof-hugo/master/content/contact.md")
-
-    val download = Pattern.compile("\"download_url\":\"(.*?)\"")
-
-    forEachMatched("https://api.github.com/repos/JavaBy/jprof-hugo/contents/content/post", download) { matcher ->
-        urls.add(matcher.group(1))
-    }
-
+    val download = Pattern.compile("<link>(.*?)</link>")
     val word = Pattern.compile("java", Pattern.CASE_INSENSITIVE)
 
-    val total = urls.stream().map { url ->
-        var count = 0
-        forEachMatched(url, word) { count++ }
-        count
-    }.parallel().reduce(0, Integer::sum)
+    val urls = matchedStream("https://jprof.by/index.xml", download) { matcher -> matcher.group(1) }.collect(toSet())
+    val total = urls.stream().flatMap { url -> matchedStream(url, word) { 1 } }.parallel().reduce(0, Integer::sum)
 
     println(total)
 }
 
-fun forEachMatched(url: String, pattern: Pattern, block: (Matcher) -> Unit) = URL(url).openConnection().inputStream.reader().forEachLine {
-    val matcher = pattern.matcher(it)
-    while (matcher.find()) block(matcher)
-}
+fun <T : Any> matchedStream(url: String, pattern: Pattern, block: (Matcher) -> T): Stream<T> =
+        URL(url).openConnection().apply {
+            addRequestProperty("User-Agent", "Y")
+        }.inputStream.bufferedReader().lines().flatMap { line ->
+            val matcher = pattern.matcher(line)
+            val iterable = object : Iterable<T> {
+                override fun iterator() = object : Iterator<T> {
+                    override fun hasNext() = matcher.find()
+                    override fun next() = block(matcher)
+                }
+            }
+            StreamSupport.stream(iterable.spliterator(), false)
+        }
